@@ -56,7 +56,7 @@ function finalizeText(text, fileName) {
 
 async function readPdf(file) {
   const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  pdfjs.GlobalWorkerOptions.workerSrc = `${pdfWorkerUrl}?module-mime=1`;
 
   const data = new Uint8Array(await file.arrayBuffer());
   const loadingTask = pdfjs.getDocument({ data });
