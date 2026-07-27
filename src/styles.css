@@ -342,6 +342,81 @@ main {
   margin-top: 14px;
 }
 
+.prompt-tools {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.visually-hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.upload-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(109, 93, 252, 0.22);
+  border-radius: 14px;
+  color: var(--purple-dark);
+  background: var(--lavender);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.upload-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: #e2ddff;
+}
+
+.upload-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.upload-icon {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: white;
+  background: var(--purple);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.file-status {
+  min-height: 25px;
+  display: flex;
+  align-items: center;
+  padding: 5px 3px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.file-status-ready {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.file-status-error {
+  color: #b54e44;
+  font-weight: 700;
+}
+
 .count-select {
   min-height: 48px;
   display: flex;
@@ -1105,8 +1180,11 @@ footer {
   .composer-card::before { border-radius: 22px; right: -8px; bottom: -9px; }
   .prompt-form textarea { min-height: 210px; }
   .prompt-actions { align-items: stretch; }
+  .prompt-actions { flex-direction: column; }
+  .prompt-tools { width: 100%; }
+  .upload-button { flex: 1; justify-content: center; }
   .count-select { flex: 0 0 auto; }
-  .generate-button { min-width: 0; flex: 1; padding-inline: 12px; }
+  .generate-button { min-width: 0; width: 100%; padding-inline: 12px; }
   .key-hint { display: none; }
   .empty-state { align-items: flex-start; text-align: left; }
   .empty-state p { margin: 0; }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { readStudyFile } from "../lib/readStudyFile.js";
 
 const PLACEHOLDER =
   "Paste a chapter, lecture notes, or an article here. Lumen will find the ideas worth remembering…";
@@ -11,7 +12,12 @@ export function PromptForm({
 }) {
   const [text, setText] = useState(initialText);
   const [count, setCount] = useState(8);
+  const [fileState, setFileState] = useState({
+    phase: "idle",
+    message: "",
+  });
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setText(initialText);
@@ -33,6 +39,33 @@ export function PromptForm({
     }
   };
 
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setFileState({ phase: "reading", message: `Reading ${file.name}…` });
+    try {
+      const result = await readStudyFile(file);
+      updateText(result.text);
+      setFileState({
+        phase: "ready",
+        message: result.truncated
+          ? `${result.fileName} added. Long text was trimmed to fit.`
+          : `${result.fileName} added to your study material.`,
+      });
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
+    } catch (error) {
+      setFileState({
+        phase: "error",
+        message: error instanceof Error ? error.message : "We couldn’t read that file.",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const fileBusy = fileState.phase === "reading";
+
   return (
     <form className="prompt-form" onSubmit={submit}>
       <div className="prompt-label-row">
@@ -50,23 +83,47 @@ export function PromptForm({
         maxLength={19999}
         rows={9}
       />
+      <div className={`file-status file-status-${fileState.phase}`}>
+        {fileState.message || "PDF, Word .docx, Markdown, or text · up to 12 MB"}
+      </div>
       <div className="prompt-actions">
-        <label className="count-select">
-          <span>Cards</span>
-          <select
-            value={count}
-            onChange={(event) => setCount(Number(event.target.value))}
-            disabled={disabled}
+        <div className="prompt-tools">
+          <input
+            ref={fileInputRef}
+            className="visually-hidden-input"
+            type="file"
+            accept=".pdf,.docx,.doc,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+            onChange={handleFile}
+            tabIndex={-1}
+          />
+          <button
+            type="button"
+            className="upload-button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || fileBusy}
           >
-            <option value={5}>5</option>
-            <option value={8}>8</option>
-            <option value={12}>12</option>
-          </select>
-        </label>
+            <span className="upload-icon" aria-hidden="true">
+              {fileBusy ? "···" : "↑"}
+            </span>
+            {fileBusy ? "Reading file" : "Upload file"}
+          </button>
+          <label className="count-select">
+            <span>Cards</span>
+            <select
+              value={count}
+              onChange={(event) => setCount(Number(event.target.value))}
+              disabled={disabled || fileBusy}
+            >
+              <option value={5}>5</option>
+              <option value={8}>8</option>
+              <option value={12}>12</option>
+            </select>
+          </label>
+        </div>
         <button
           type="submit"
           className="button button-primary generate-button"
-          disabled={disabled || !text.trim()}
+          disabled={disabled || fileBusy || !text.trim()}
         >
           <span aria-hidden="true">✦</span>
           Build my deck
