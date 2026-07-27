@@ -4,6 +4,14 @@ import { parseDeck } from "../lib/validate.js";
 import { actions, deckReducer, initialState } from "../state/deckReducer.js";
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const LONG_DOCUMENT_TIMEOUT_MS = 40_000;
+const LONG_DOCUMENT_THRESHOLD = 8_000;
+
+export function timeoutForText(text) {
+  return text.length > LONG_DOCUMENT_THRESHOLD
+    ? LONG_DOCUMENT_TIMEOUT_MS
+    : REQUEST_TIMEOUT_MS;
+}
 
 function abortableDelay(milliseconds, signal) {
   return new Promise((resolve, reject) => {
@@ -49,7 +57,7 @@ export function useDeck() {
       const timeout = window.setTimeout(() => {
         timedOut = true;
         controller.abort();
-      }, REQUEST_TIMEOUT_MS);
+      }, timeoutForText(cleanText));
 
       dispatch(actions.generateStart());
 
