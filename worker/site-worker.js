@@ -43,6 +43,24 @@ const deckSchema = {
 
 const staticAssets = /*__STATIC_ASSETS__*/ {};
 
+function decodeAsset(asset) {
+  const binary = atob(asset.body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function staticResponse(asset, cacheControl) {
+  return new Response(decodeAsset(asset), {
+    headers: {
+      "Content-Type": asset.type,
+      "Cache-Control": cacheControl,
+    },
+  });
+}
+
 function buildMessages(text, count) {
   const safeCount = [5, 8, 12].includes(Number(count)) ? Number(count) : 8;
   const material = text.slice(0, 8000);
@@ -149,26 +167,19 @@ export default {
     }
     const asset = staticAssets[url.pathname];
     if (asset) {
-      return new Response(asset.body, {
-        headers: {
-          "Content-Type": asset.type,
-          "Cache-Control": url.pathname.startsWith("/assets/")
-            ? "public, max-age=31536000, immutable"
-            : "no-cache",
-        },
-      });
+      return staticResponse(
+        asset,
+        url.pathname.startsWith("/assets/")
+          ? "public, max-age=31536000, immutable"
+          : "no-cache",
+      );
     }
     if (
       request.method === "GET" &&
       request.headers.get("Accept")?.includes("text/html")
     ) {
       const index = staticAssets["/"];
-      return new Response(index.body, {
-        headers: {
-          "Content-Type": index.type,
-          "Cache-Control": "no-cache",
-        },
-      });
+      return staticResponse(index, "no-cache");
     }
     return new Response("Not found", { status: 404 });
   },

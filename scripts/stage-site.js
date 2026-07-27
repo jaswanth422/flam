@@ -18,11 +18,11 @@ const contentTypes = {
 
 const staticAssets = {
   "/": {
-    body: readFileSync("dist/index.html", "utf8"),
+    body: readFileSync("dist/index.html").toString("base64"),
     type: contentTypes[".html"],
   },
   "/index.html": {
-    body: readFileSync("dist/index.html", "utf8"),
+    body: readFileSync("dist/index.html").toString("base64"),
     type: contentTypes[".html"],
   },
 };
@@ -30,7 +30,7 @@ const staticAssets = {
 for (const file of readdirSync("dist/assets")) {
   const path = join("dist/assets", file);
   staticAssets[`/assets/${file}`] = {
-    body: readFileSync(path, "utf8"),
+    body: readFileSync(path).toString("base64"),
     type: contentTypes[extname(file)] ?? "application/octet-stream",
   };
 }
