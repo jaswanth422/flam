@@ -41,6 +41,8 @@ const deckSchema = {
   },
 };
 
+const staticAssets = /*__STATIC_ASSETS__*/ {};
+
 function buildMessages(text, count) {
   const safeCount = [5, 8, 12].includes(Number(count)) ? Number(count) : 8;
   const material = text.slice(0, 8000);
@@ -145,7 +147,29 @@ export default {
     if (url.pathname === "/api/generate") {
       return generate(request, env);
     }
-    if (env.ASSETS) return env.ASSETS.fetch(request);
+    const asset = staticAssets[url.pathname];
+    if (asset) {
+      return new Response(asset.body, {
+        headers: {
+          "Content-Type": asset.type,
+          "Cache-Control": url.pathname.startsWith("/assets/")
+            ? "public, max-age=31536000, immutable"
+            : "no-cache",
+        },
+      });
+    }
+    if (
+      request.method === "GET" &&
+      request.headers.get("Accept")?.includes("text/html")
+    ) {
+      const index = staticAssets["/"];
+      return new Response(index.body, {
+        headers: {
+          "Content-Type": index.type,
+          "Cache-Control": "no-cache",
+        },
+      });
+    }
     return new Response("Not found", { status: 404 });
   },
 };
