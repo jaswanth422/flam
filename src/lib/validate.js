@@ -29,7 +29,10 @@ function nextItemId(index) {
   return `${index}-item-${itemCounter}`;
 }
 
-export function parseDeck(rawText, mode) {
+export function parseDeck(
+  rawText,
+  { mode = "flashcards", grounding = "source", sourceText = "" } = {},
+) {
   if (typeof rawText !== "string" || rawText.trim().length === 0) {
     return { ok: false, error: errorFor(ErrorKind.UNPARSEABLE) };
   }
@@ -57,12 +60,18 @@ export function parseDeck(rawText, mode) {
 
   const items = [];
   const skipReasons = [];
+  const warnings = [];
   const slots = [];
   raw.items.forEach((candidate, originalIndex) => {
-    const result = validateItem(candidate, mode);
+    const result = validateItem(candidate, mode, { grounding, sourceText });
     if (result.ok) {
       const item = { ...result.item, id: nextItemId(originalIndex) };
       items.push(item);
+      warnings.push(...result.warnings.map((warning) => ({
+        itemId: item.id,
+        originalIndex,
+        warning,
+      })));
       slots.push({
         kind: "item",
         id: `slot-${originalIndex}`,
@@ -93,6 +102,8 @@ export function parseDeck(rawText, mode) {
           : "Untitled deck",
       items,
       slots,
+      grounding,
+      warnings,
     },
     skipped: raw.items.length - items.length,
     skipReasons,

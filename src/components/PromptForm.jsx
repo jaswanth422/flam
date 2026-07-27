@@ -113,6 +113,11 @@ export function PromptForm({
       <div className={`file-status file-status-${fileState.phase}`}>
         {fileState.message || "PDF, Word .docx, Markdown, or text · up to 12 MB"}
       </div>
+      <div className={`grounding-preview ${text.trim().length >= 400 ? "is-source" : "is-topic"}`}>
+        {text.trim().length >= 400
+          ? "✓ Source mode — evidence will be checked against these notes"
+          : "General-knowledge mode — add 400+ characters to verify against your notes"}
+      </div>
       <div className="prompt-actions">
         <div className="prompt-tools">
           <input

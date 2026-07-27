@@ -7,11 +7,20 @@ import { PromptForm } from "./components/PromptForm.jsx";
 import { ResultsView } from "./components/ResultsView.jsx";
 import { useDeck } from "./hooks/useDeck.js";
 import { actions } from "./state/deckReducer.js";
+import { scoreSession } from "./state/selectors.js";
 
-const SAMPLE_NOTES = `Cells are the basic units of life. The cell membrane is selectively permeable and controls what enters and leaves the cell. The nucleus stores DNA and coordinates cellular activity. Ribosomes build proteins. Mitochondria release usable energy from food through cellular respiration. Plant cells also have chloroplasts, which capture light energy for photosynthesis, and a rigid cell wall that provides structure.`;
+const SAMPLE_NOTES = `Cells are the basic units of life. The cell membrane is selectively permeable and controls what enters and leaves the cell. The nucleus stores DNA and coordinates cellular activity. Ribosomes build proteins. Mitochondria release usable energy from food through cellular respiration. Plant cells also have chloroplasts, which capture light energy for photosynthesis, and a rigid cell wall that provides structure. Photosynthesis stores captured light energy in sugars that the plant can use.`;
 
 function App() {
-  const { state, generate, retry, cancel, regenerateItem, dispatch } = useDeck();
+  const {
+    state,
+    generate,
+    retry,
+    cancel,
+    regenerateItem,
+    regeneratingIds,
+    dispatch,
+  } = useDeck();
   const [draft, setDraft] = useState("");
 
   const activeItems = useMemo(() => {
@@ -22,11 +31,20 @@ function App() {
   }, [state.activeIds, state.deck]);
 
   const score = Math.max(0, activeItems.length - state.wrongIds.length);
+  const quizScore = useMemo(
+    () => scoreSession(
+      state.deck ? { ...state.deck, items: activeItems } : null,
+      state.answers,
+    ),
+    [activeItems, state.answers, state.deck],
+  );
   const statusMessage =
     state.phase === "loading"
       ? "Generating your study deck."
       : state.phase === "results"
-        ? `${state.mode === "quiz" ? "Quiz" : "Flashcard"} session complete. ${score} of ${activeItems.length} secure.`
+        ? state.mode === "quiz"
+          ? `Quiz complete. ${quizScore.correct} of ${quizScore.total} correct, ${quizScore.percent} percent.`
+          : `Flashcard session complete. ${score} of ${activeItems.length} known.`
         : state.error?.message ?? "";
 
   const handleExample = () => {
@@ -109,7 +127,7 @@ function App() {
               <div className="trust-row">
                 <div><strong>2 min</strong><span>to a study deck</span></div>
                 <div><strong>Zero</strong><span>copy-paste cleanup</span></div>
-                <div><strong>100%</strong><span>grounded in your notes</span></div>
+                <div><strong>Traceable</strong><span>evidence you can inspect</span></div>
               </div>
             </section>
 
@@ -148,6 +166,9 @@ function App() {
             items={activeItems}
             answers={state.answers}
             ratings={state.ratings}
+            grounding={state.grounding}
+            sourceText={draft}
+            regeneratingIds={regeneratingIds}
             onAnswer={(itemId, choiceIndex) =>
               dispatch(actions.answer(itemId, choiceIndex))
             }
@@ -157,6 +178,7 @@ function App() {
             onNext={() => dispatch(actions.nextCard())}
             onPrev={() => dispatch(actions.prevCard())}
             onDelete={(itemId) => dispatch(actions.deleteItem(itemId))}
+            onEdit={(itemId, patch) => dispatch(actions.editItem(itemId, patch))}
             onRegenerate={handleRegenerate}
             onFinish={() => dispatch(actions.finishSession())}
           />
@@ -168,7 +190,9 @@ function App() {
             total={activeItems.length}
             wrongCount={state.wrongIds.length}
             mode={state.mode}
+            quizScore={quizScore}
             onRetest={() => dispatch(actions.retestWrong())}
+            onRetake={() => dispatch(actions.retakeAll())}
             onReset={() => dispatch(actions.reset())}
           />
         )}

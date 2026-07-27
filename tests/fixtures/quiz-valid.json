@@ -1,7 +1,23 @@
 {
   "title": "Quick Check",
   "items": [
-    {"type":"mcq","question":"What stores DNA?","choices":["Nucleus","Ribosome","Membrane"],"correctIndex":0},
-    {"type":"mcq","question":"What builds proteins?","choices":["Membrane","Nucleus","Ribosome","Cell wall"],"correctIndex":2}
+    {
+      "type":"mcq",
+      "question":"What stores DNA?",
+      "choices":["Nucleus","Ribosome","Membrane","Cell wall"],
+      "correctIndex":0,
+      "why":"The nucleus contains the cell's genetic instructions.",
+      "topic":"Cell Structures",
+      "evidence":"The nucleus stores cellular DNA and coordinates the activities of the cell"
+    },
+    {
+      "type":"mcq",
+      "question":"What builds proteins?",
+      "choices":["Membrane","Nucleus","Ribosome","Cell wall"],
+      "correctIndex":2,
+      "why":"Ribosomes assemble proteins from the cell's instructions.",
+      "topic":"Cell Structures",
+      "evidence":"Ribosomes build proteins needed for growth repair and everyday cellular activity"
+    }
   ]
 }

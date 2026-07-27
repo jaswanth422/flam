@@ -4,8 +4,8 @@ import { actions, deckReducer, initialState } from "../src/state/deckReducer.js"
 const quizDeck = {
   title: "Quiz",
   items: [
-    { id: "one", type: "mcq", question: "One", choices: ["A", "B", "C"], correctIndex: 1 },
-    { id: "two", type: "mcq", question: "Two", choices: ["A", "B", "C"], correctIndex: 0 },
+    { id: "one", type: "mcq", question: "One", choices: ["A", "B", "C", "D"], correctIndex: 1 },
+    { id: "two", type: "mcq", question: "Two", choices: ["A", "B", "C", "D"], correctIndex: 0 },
   ],
 };
 
@@ -18,7 +18,7 @@ const flashDeck = {
 };
 
 function generated(deck, mode) {
-  let state = deckReducer(initialState, actions.generateStart(mode));
+  let state = deckReducer(initialState, actions.generateStart(mode, "source"));
   return deckReducer(state, actions.generateSuccess(deck));
 }
 
@@ -26,8 +26,9 @@ describe("deckReducer", () => {
   it("changes mode only while idle and stores generation mode", () => {
     const idleQuiz = deckReducer(initialState, actions.setMode("quiz"));
     expect(idleQuiz.mode).toBe("quiz");
-    const loading = deckReducer(idleQuiz, actions.generateStart("flashcards"));
+    const loading = deckReducer(idleQuiz, actions.generateStart("flashcards", "source"));
     expect(loading.mode).toBe("flashcards");
+    expect(loading.grounding).toBe("source");
     expect(deckReducer(loading, actions.setMode("quiz"))).toBe(loading);
   });
 
@@ -78,6 +79,16 @@ describe("deckReducer", () => {
     expect(state.cardIndex).toBe(0);
     expect(state.answers.two).toBeUndefined();
     expect(state.wrongIds).toEqual([]);
+  });
+
+  it("retakes the full deck with cleared work", () => {
+    let state = generated(quizDeck, "quiz");
+    state = { ...state, activeIds: ["one"], answers: { one: 1 }, wrongIds: ["two"] };
+    state = deckReducer(state, actions.retakeAll());
+    expect(state.activeIds).toBeNull();
+    expect(state.answers).toEqual({});
+    expect(state.wrongIds).toEqual([]);
+    expect(state.cardIndex).toBe(0);
   });
 
   it("throws for unknown actions", () => {

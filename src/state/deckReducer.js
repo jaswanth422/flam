@@ -2,6 +2,7 @@ export const initialState = {
   deck: null,
   phase: "idle",
   mode: "flashcards",
+  grounding: "topic",
   cardIndex: 0,
   answers: {},
   ratings: {},
@@ -15,9 +16,9 @@ export const initialState = {
 
 export const actions = {
   setMode: (mode) => ({ type: "SET_MODE", payload: { mode } }),
-  generateStart: (mode, repair = false) => ({
+  generateStart: (mode, grounding, repair = false) => ({
     type: "GENERATE_START",
-    payload: { mode },
+    payload: { mode, grounding },
     repair,
   }),
   generateSuccess: (deck, skipped = 0, skipReasons = []) => ({
@@ -37,6 +38,7 @@ export const actions = {
   }),
   finishSession: () => ({ type: "FINISH_SESSION" }),
   retestWrong: () => ({ type: "RETEST_WRONG" }),
+  retakeAll: () => ({ type: "RETAKE_ALL" }),
   reset: () => ({ type: "RESET" }),
   editItem: (itemId, patch) => ({ type: "EDIT_ITEM", payload: { itemId, patch } }),
   deleteItem: (itemId) => ({ type: "DELETE_ITEM", payload: { itemId } }),
@@ -72,6 +74,9 @@ export function deckReducer(state, action) {
         mode: ["flashcards", "quiz"].includes(action.payload.mode)
           ? action.payload.mode
           : state.mode,
+        grounding: ["source", "topic"].includes(action.payload.grounding)
+          ? action.payload.grounding
+          : state.grounding,
         error: null,
         skipped: 0,
         skipReasons: [],
@@ -153,6 +158,17 @@ export function deckReducer(state, action) {
         ratings: Object.fromEntries(
           Object.entries(state.ratings).filter(([id]) => !state.wrongIds.includes(id)),
         ),
+        phase: "studying",
+      };
+    case "RETAKE_ALL":
+      if (!state.deck) return state;
+      return {
+        ...state,
+        activeIds: null,
+        cardIndex: 0,
+        answers: {},
+        ratings: {},
+        wrongIds: [],
         phase: "studying",
       };
     case "RESET":

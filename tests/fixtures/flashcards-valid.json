@@ -1,7 +1,21 @@
 {
   "title": "Recall",
   "items": [
-    {"type":"flashcard","front":"What stores cellular DNA?","back":"The nucleus."},
-    {"type":"flashcard","front":"What builds proteins?","back":"Ribosomes."}
+    {
+      "type":"flashcard",
+      "front":"What stores cellular DNA?",
+      "back":"The nucleus.",
+      "story":"It keeps genetic instructions together so the cell can coordinate its work.",
+      "topic":"Cell Structures",
+      "evidence":"The nucleus stores cellular DNA and coordinates the activities of the cell"
+    },
+    {
+      "type":"flashcard",
+      "front":"What builds proteins?",
+      "back":"Ribosomes.",
+      "story":"They assemble the molecules a cell needs from its genetic instructions.",
+      "topic":"Cell Structures",
+      "evidence":"Ribosomes build proteins needed for growth repair and everyday cellular activity"
+    }
   ]
 }

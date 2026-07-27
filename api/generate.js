@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
-  const { text, count, mode, fail } = req.body ?? {};
+  const { text, count, mode, grounding, repair, fail } = req.body ?? {};
   if (typeof text !== "string" || !text.trim() || text.length >= 20000) {
     return res.status(400).json({
       error: "Text must be a non-empty string under 20,000 characters.",
@@ -83,6 +83,9 @@ export default async function handler(req, res) {
   }
   if (mode !== "flashcards" && mode !== "quiz") {
     return res.status(400).json({ error: "Mode must be flashcards or quiz." });
+  }
+  if (grounding !== "source" && grounding !== "topic") {
+    return res.status(400).json({ error: "Grounding must be source or topic." });
   }
 
   if (process.env.NODE_ENV !== "production" && fail) {
@@ -104,12 +107,12 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           model: process.env.FIREWORKS_MODEL,
-          max_tokens: 2000,
-          temperature: 0.3,
-          messages: buildMessages({ text, count, mode }),
+          max_tokens: 3500,
+          temperature: 0.2,
+          messages: buildMessages({ text, count, mode, grounding, repair }),
           response_format: {
             type: "json_schema",
-            json_schema: { name: "Deck", schema: schemaFor(mode) },
+            json_schema: { name: "Deck", schema: schemaFor(mode, grounding) },
           },
         }),
       },

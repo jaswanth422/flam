@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { errorFor, ErrorKind } from "../lib/errors.js";
 import { parseDeck } from "../lib/validate.js";
 import { actions, deckReducer, initialState } from "../state/deckReducer.js";
@@ -33,20 +33,23 @@ export function useDeck() {
   const abortRef = useRef(null);
   const cardRequestsRef = useRef(new Map());
   const lastRequestRef = useRef(null);
+  const [regeneratingIds, setRegeneratingIds] = useState([]);
 
   const abortCardRequests = useCallback(() => {
     for (const request of cardRequestsRef.current.values()) {
       request.controller.abort();
     }
     cardRequestsRef.current.clear();
+    setRegeneratingIds([]);
   }, []);
 
   const generate = useCallback(
     async (text, count = 8, mode = "flashcards") => {
       const cleanText = typeof text === "string" ? text.trim() : "";
       if (!cleanText) return;
+      const grounding = cleanText.length >= 400 ? "source" : "topic";
 
-      lastRequestRef.current = { text: cleanText, count, mode };
+      lastRequestRef.current = { text: cleanText, count, mode, grounding };
       const id = ++reqId.current;
       abortRef.current?.abort();
       abortCardRequests();
@@ -59,10 +62,10 @@ export function useDeck() {
         controller.abort();
       }, timeoutForText(cleanText));
 
-      dispatch(actions.generateStart(mode));
+      dispatch(actions.generateStart(mode, grounding));
 
       try {
-        let requestText = cleanText;
+        let repair = null;
         let repaired = false;
         let rateLimitRetried = false;
 
@@ -70,7 +73,7 @@ export function useDeck() {
           const response = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: requestText, count, mode }),
+            body: JSON.stringify({ text: cleanText, count, mode, grounding, repair }),
             signal: controller.signal,
           });
           if (id !== reqId.current) return;
@@ -101,22 +104,22 @@ export function useDeck() {
             return;
           }
 
-          const result = parseDeck(data.content, mode);
+          const result = parseDeck(data.content, {
+            mode,
+            grounding,
+            sourceText: cleanText,
+          });
           if (
             !result.ok &&
             result.error.kind === ErrorKind.UNPARSEABLE &&
             !repaired
           ) {
             repaired = true;
-            dispatch(actions.generateStart(mode, true));
-            requestText = [
-              cleanText,
-              "",
-              "REPAIR INSTRUCTION:",
-              "The previous response could not be parsed. Return a corrected JSON deck only.",
-              `Parse error: ${result.error.message}`,
-              `Failed output: ${String(data.content).slice(0, 4000)}`,
-            ].join("\n");
+            dispatch(actions.generateStart(mode, grounding, true));
+            repair = {
+              error: result.error.message,
+              previousOutput: data.content,
+            };
             continue;
           }
 
@@ -178,6 +181,7 @@ export function useDeck() {
     const controller = new AbortController();
     const id = (previous?.id ?? 0) + 1;
     cardRequestsRef.current.set(item.id, { id, controller });
+    setRegeneratingIds((current) => [...new Set([...current, item.id])]);
 
     const isCurrent = () => {
       const entry = cardRequestsRef.current.get(item.id);
@@ -193,9 +197,10 @@ export function useDeck() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: `${sourceText}\n\nGenerate exactly one ${item.type} to replace a weak study item.`,
-          count: 5,
+          text: sourceText,
+          count: 1,
           mode: item.type === "mcq" ? "quiz" : "flashcards",
+          grounding: sourceText.trim().length >= 400 ? "source" : "topic",
         }),
         signal: controller.signal,
       });
@@ -204,7 +209,11 @@ export function useDeck() {
       if (!isCurrent()) return;
       const parsed = parseDeck(
         data.content,
-        item.type === "mcq" ? "quiz" : "flashcards",
+        {
+          mode: item.type === "mcq" ? "quiz" : "flashcards",
+          grounding: sourceText.trim().length >= 400 ? "source" : "topic",
+          sourceText,
+        },
       );
       const replacement = parsed.ok
         ? parsed.deck.items.find((candidate) => candidate.type === item.type)
@@ -220,6 +229,9 @@ export function useDeck() {
     } finally {
       if (cardRequestsRef.current.get(item.id)?.id === id) {
         cardRequestsRef.current.delete(item.id);
+        setRegeneratingIds((current) =>
+          current.filter((itemId) => itemId !== item.id),
+        );
       }
     }
   }, []);
@@ -232,5 +244,13 @@ export function useDeck() {
     [abortCardRequests],
   );
 
-  return { state, generate, retry, cancel, regenerateItem, dispatch };
+  return {
+    state,
+    generate,
+    retry,
+    cancel,
+    regenerateItem,
+    regeneratingIds,
+    dispatch,
+  };
 }

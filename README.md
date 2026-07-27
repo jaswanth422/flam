@@ -11,6 +11,37 @@ HTML remains a flat, ordered list, while CSS transforms provide the spatial
 presentation. Invalid generated items retain their source position as
 non-interactive “void” cards instead of silently shifting the deck.
 
+## Grounding and verification
+
+Lumen uses two honest input regimes:
+
+- Inputs of at least 400 characters are treated as source material. The model
+  must return an evidence quote for each item, and the client checks that quote
+  against the supplied text.
+- Shorter inputs are treated as topics. They use conservative textbook-level
+  knowledge and are explicitly labelled as general knowledge, never as
+  verified against the user's notes.
+
+Source items have three verification outcomes:
+
+- `verified`: the normalized quote appears contiguously in the source.
+- `partial`: at least 85% of meaningful evidence tokens occur within a local
+  source window.
+- `unverified`: the quote is missing, too short, fabricated, or stitched from
+  passages too far apart.
+
+Structural failures such as the wrong card type, a blank question/answer, an
+invalid correct index, or anything other than four quiz choices are dropped.
+Presentation-quality failures such as a long front, missing story, missing
+topic, or failed evidence check are warnings: the item stays visible so the
+student can inspect and edit it. This prevents the validator from silently
+inflating its own trust score.
+
+The 85% partial-match threshold is hand-tuned against the project fixtures, not
+a mathematically privileged value. Token matching is also order-independent
+inside its locality window, so a locally scrambled quote can still pass as a
+close match. A longest-common-subsequence ratio is the next planned improvement.
+
 ## Run locally
 
 ```bash
@@ -41,6 +72,7 @@ npm test
 npm run build
 ```
 
-The test suite covers both generation modes, wrong-type items, valid, fenced,
-truncated, malformed, empty, partially valid, and wrong-shape model outputs,
-plus reducer and retest edge cases.
+The test suite covers both generation modes, wrong-type items, exact and fuzzy
+evidence, quote-style normalization, fabricated and stitched evidence, topic
+mode, soft warnings, malformed output, derived quiz scoring, reducer state,
+and retest edge cases.

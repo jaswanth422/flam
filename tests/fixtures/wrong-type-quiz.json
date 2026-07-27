@@ -1,7 +1,7 @@
 {
   "title": "Wrong Type",
   "items": [
-    {"type":"mcq","question":"Kept?","choices":["Yes","No","Maybe"],"correctIndex":0},
+    {"type":"mcq","question":"Kept?","choices":["Yes","No","Maybe","Unsure"],"correctIndex":0},
     {"type":"flashcard","front":"Dropped","back":"Answer"}
   ]
 }
