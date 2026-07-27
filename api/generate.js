@@ -1,5 +1,5 @@
 import { buildMessages } from "../src/lib/prompt.js";
-import { deckSchema } from "../src/lib/schema.js";
+import { schemaFor } from "../src/lib/schema.js";
 
 const sleep = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -75,11 +75,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
-  const { text, count, fail } = req.body ?? {};
+  const { text, count, mode, fail } = req.body ?? {};
   if (typeof text !== "string" || !text.trim() || text.length >= 20000) {
     return res.status(400).json({
       error: "Text must be a non-empty string under 20,000 characters.",
     });
+  }
+  if (mode !== "flashcards" && mode !== "quiz") {
+    return res.status(400).json({ error: "Mode must be flashcards or quiz." });
   }
 
   if (process.env.NODE_ENV !== "production" && fail) {
@@ -103,10 +106,10 @@ export default async function handler(req, res) {
           model: process.env.FIREWORKS_MODEL,
           max_tokens: 2000,
           temperature: 0.3,
-          messages: buildMessages({ text, count }),
+          messages: buildMessages({ text, count, mode }),
           response_format: {
             type: "json_schema",
-            json_schema: { name: "Deck", schema: deckSchema },
+            json_schema: { name: "Deck", schema: schemaFor(mode) },
           },
         }),
       },

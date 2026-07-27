@@ -1,4 +1,4 @@
-const deckSchema = {
+const flashcardSchema = {
   type: "object",
   required: ["title", "items"],
   additionalProperties: false,
@@ -8,38 +8,49 @@ const deckSchema = {
       type: "array",
       minItems: 1,
       items: {
-        oneOf: [
-          {
-            type: "object",
-            required: ["type", "front", "back"],
-            additionalProperties: false,
-            properties: {
-              type: { const: "flashcard" },
-              front: { type: "string" },
-              back: { type: "string" },
-            },
-          },
-          {
-            type: "object",
-            required: ["type", "question", "choices", "correctIndex"],
-            additionalProperties: false,
-            properties: {
-              type: { const: "mcq" },
-              question: { type: "string" },
-              choices: {
-                type: "array",
-                minItems: 2,
-                maxItems: 5,
-                items: { type: "string" },
-              },
-              correctIndex: { type: "integer", minimum: 0 },
-            },
-          },
-        ],
+        type: "object",
+        required: ["type", "front", "back"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "flashcard" },
+          front: { type: "string" },
+          back: { type: "string" },
+        },
       },
     },
   },
 };
+
+const quizSchema = {
+  type: "object",
+  required: ["title", "items"],
+  additionalProperties: false,
+  properties: {
+    title: { type: "string" },
+    items: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        required: ["type", "question", "choices", "correctIndex"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "mcq" },
+          question: { type: "string" },
+          choices: {
+            type: "array",
+            minItems: 3,
+            maxItems: 4,
+            items: { type: "string" },
+          },
+          correctIndex: { type: "integer", minimum: 0, maximum: 3 },
+        },
+      },
+    },
+  },
+};
+
+const schemaFor = (mode) => mode === "quiz" ? quizSchema : flashcardSchema;
 
 const staticAssets = /*__STATIC_ASSETS__*/ {};
 
@@ -61,27 +72,38 @@ function staticResponse(asset, cacheControl) {
   });
 }
 
-function buildMessages(text, count) {
+function buildMessages(text, count, mode) {
   const safeCount = [5, 8, 12].includes(Number(count)) ? Number(count) : 8;
   const material = text.slice(0, 8000);
   const userContent =
     text.length > 8000
       ? `${material}\n\n[The supplied material was truncated to 8000 characters.]`
       : material;
+  const modeRules = mode === "quiz"
+    ? [
+        `Return at most ${safeCount} multiple-choice quiz questions and no flashcards.`,
+        "Give every question 3 or 4 choices with one unambiguously correct answer.",
+        "Build plausible distractors from the supplied material or likely confusions.",
+        "Keep choice lengths similar so wording does not reveal the answer.",
+        "Vary correctIndex across the deck and ensure it points to the correct choice.",
+      ]
+    : [
+        `Return at most ${safeCount} flashcards and no quiz questions.`,
+        "Each flashcard must test exactly one atomic fact.",
+        "Keep every front under 12 words.",
+        "Keep every back to a self-contained definition or answer under 40 words.",
+        "Do not use multipart questions, lists of questions, or vague prompts.",
+      ];
   return [
     {
       role: "system",
       content: [
-        "Create a high-quality study deck from the supplied material.",
+        "Create a focused study deck from the supplied material.",
         "Return JSON only: no prose, explanations, markdown, or code fences.",
-        `Return at most ${safeCount} items and aim for a roughly even mix of flashcards and MCQs.`,
+        ...modeRules,
         "Prioritize central concepts, definitions, mechanisms, cause-and-effect relationships, and useful comparisons over minor trivia.",
-        "Every flashcard must test one clear idea with a specific prompt and a concise, self-contained answer.",
-        "Do not merely copy a sentence from the material, create duplicate items, or ask vague questions such as 'What is discussed?'.",
-        "For MCQs, write one unambiguously correct answer and plausible distractors based on common misunderstandings.",
-        "For every MCQ, correctIndex must point to the correct entry in choices.",
-        "Use only facts present in the supplied material. Never invent facts.",
-        `The output must follow this JSON Schema: ${JSON.stringify(deckSchema)}`,
+        "Do not copy sentences mechanically, create duplicates, or invent facts.",
+        `The output must follow this JSON Schema: ${JSON.stringify(schemaFor(mode))}`,
       ].join("\n"),
     },
     { role: "user", content: userContent },
@@ -107,12 +129,15 @@ async function generate(request, env) {
     return json({ error: "Request body must be valid JSON." }, 400);
   }
 
-  const { text, count } = body ?? {};
+  const { text, count, mode } = body ?? {};
   if (typeof text !== "string" || !text.trim() || text.length >= 20000) {
     return json(
       { error: "Text must be a non-empty string under 20,000 characters." },
       400,
     );
+  }
+  if (mode !== "flashcards" && mode !== "quiz") {
+    return json({ error: "Mode must be flashcards or quiz." }, 400);
   }
 
   if (!env.FIREWORKS_API_KEY || !env.FIREWORKS_MODEL) {
@@ -132,10 +157,10 @@ async function generate(request, env) {
           model: env.FIREWORKS_MODEL,
           max_tokens: 2000,
           temperature: 0.3,
-          messages: buildMessages(text, count),
+          messages: buildMessages(text, count, mode),
           response_format: {
             type: "json_schema",
-            json_schema: { name: "Deck", schema: deckSchema },
+            json_schema: { name: "Deck", schema: schemaFor(mode) },
           },
         }),
         signal: request.signal,

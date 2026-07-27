@@ -2,17 +2,17 @@ import { useEffect } from "react";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
-export function McqCard({ item, chosen, onAnswer, showResult = true }) {
+export function McqCard({ item, chosen, onAnswer, showResult = true, active = true }) {
   useEffect(() => {
     const handleNumberKey = (event) => {
       const index = Number(event.key) - 1;
-      if (index >= 0 && index < item.choices.length && chosen === undefined) {
+      if (active && index >= 0 && index < item.choices.length && chosen === undefined) {
         onAnswer(index);
       }
     };
     window.addEventListener("keydown", handleNumberKey);
     return () => window.removeEventListener("keydown", handleNumberKey);
-  }, [chosen, item.choices.length, onAnswer]);
+  }, [active, chosen, item.choices.length, onAnswer]);
 
   return (
     <article className="mcq-card">
@@ -38,7 +38,8 @@ export function McqCard({ item, chosen, onAnswer, showResult = true }) {
               type="button"
               key={`${choice}-${index}`}
               className={`choice ${isChosen ? "is-chosen" : ""} ${resultClass}`}
-              disabled={answered}
+              disabled={answered || !active}
+              tabIndex={active ? 0 : -1}
               onClick={() => onAnswer(index)}
             >
               <span className="choice-letter">{LETTERS[index]}</span>

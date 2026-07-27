@@ -2,6 +2,7 @@ export function ResultsView({
   score,
   total,
   wrongCount,
+  mode,
   onRetest,
   onReset,
 }) {
@@ -23,12 +24,14 @@ export function ResultsView({
       <p className="eyebrow">Session complete</p>
       <h1>{message}</h1>
       <p className="results-intro">
-        Every pass strengthens the path back to what you learned.
+        {mode === "quiz"
+          ? "Your answers separated secure knowledge from the questions worth another pass."
+          : "Your recall ratings surfaced the cards that still need another orbit."}
       </p>
       <div className="score-ring" style={{ "--score": `${percent * 3.6}deg` }}>
         <div>
           <strong>{percent}%</strong>
-          <span>{score} of {total} correct</span>
+          <span>{score} of {total} {mode === "quiz" ? "correct" : "known"}</span>
         </div>
       </div>
       <div className="results-actions">
@@ -39,7 +42,7 @@ export function ResultsView({
           disabled={wrongCount === 0}
         >
           <span aria-hidden="true">↻</span>
-          Retest {wrongCount} {wrongCount === 1 ? "miss" : "misses"}
+          Retest {wrongCount} {wrongCount === 1 ? "item" : "items"}
         </button>
         <button type="button" className="button button-secondary" onClick={onReset}>
           Make a new deck

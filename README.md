@@ -1,8 +1,15 @@
 # Lumen
 
-Lumen turns pasted study material into a mixed deck of flashcards and
-multiple-choice checks. The interface is built with React 18 and the request
+Lumen turns pasted study material into focused flashcards or a
+multiple-choice quiz. The interface is built with React 18 and the request
 lifecycle is managed with `useReducer`, request IDs, and abort controllers.
+
+The separate modes are deliberate: Lumen favors two well-executed study
+experiences over a mixed deck. Flashcards use a horizontal recall orbit and
+ratings; quizzes use a vertical answer tumbler and scoring. In both views the
+HTML remains a flat, ordered list, while CSS transforms provide the spatial
+presentation. Invalid generated items retain their source position as
+non-interactive “void” cards instead of silently shifting the deck.
 
 ## Run locally
 
@@ -34,5 +41,6 @@ npm test
 npm run build
 ```
 
-The test suite covers valid, fenced, truncated, malformed, empty, partially
-valid, and wrong-shape model outputs, plus reducer edge cases.
+The test suite covers both generation modes, wrong-type items, valid, fenced,
+truncated, malformed, empty, partially valid, and wrong-shape model outputs,
+plus reducer and retest edge cases.

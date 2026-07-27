@@ -4,7 +4,6 @@ import { EmptyState } from "./components/EmptyState.jsx";
 import { ErrorPanel } from "./components/ErrorPanel.jsx";
 import { LoadingSkeleton } from "./components/LoadingSkeleton.jsx";
 import { PromptForm } from "./components/PromptForm.jsx";
-import { QuizView } from "./components/QuizView.jsx";
 import { ResultsView } from "./components/ResultsView.jsx";
 import { useDeck } from "./hooks/useDeck.js";
 import { actions } from "./state/deckReducer.js";
@@ -22,13 +21,12 @@ function App() {
     return state.deck.items.filter((item) => ids.has(item.id));
   }, [state.activeIds, state.deck]);
 
-  const quizItems = activeItems.filter((item) => item.type === "mcq");
-  const score = Math.max(0, quizItems.length - state.wrongIds.length);
+  const score = Math.max(0, activeItems.length - state.wrongIds.length);
   const statusMessage =
     state.phase === "loading"
       ? "Generating your study deck."
       : state.phase === "results"
-        ? `Quiz complete. You scored ${score} out of ${quizItems.length}.`
+        ? `${state.mode === "quiz" ? "Quiz" : "Flashcard"} session complete. ${score} of ${activeItems.length} secure.`
         : state.error?.message ?? "";
 
   const handleExample = () => {
@@ -55,8 +53,12 @@ function App() {
         dispatch(actions.dismissError());
       }
       if (state.phase !== "studying") return;
-      if (event.key === "ArrowRight") dispatch(actions.nextCard());
-      if (event.key === "ArrowLeft") dispatch(actions.prevCard());
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        dispatch(actions.nextCard());
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        dispatch(actions.prevCard());
+      }
     };
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
@@ -101,8 +103,8 @@ function App() {
                 <em>Remember more.</em>
               </h1>
               <p className="hero-lede">
-                Turn dense notes into focused flashcards and quick checks—built
-                around the ideas that matter.
+                Turn dense notes into focused flashcards or a dedicated quiz—
+                each built around the ideas that matter.
               </p>
               <div className="trust-row">
                 <div><strong>2 min</strong><span>to a study deck</span></div>
@@ -121,6 +123,8 @@ function App() {
                 disabled={isLoading}
                 initialText={draft}
                 onTextChange={setDraft}
+                mode={state.mode}
+                onModeChange={(mode) => dispatch(actions.setMode(mode))}
               />
               <ErrorPanel
                 error={state.error}
@@ -135,30 +139,35 @@ function App() {
         {isLoading && <LoadingSkeleton onCancel={cancel} />}
 
         {state.phase === "studying" && state.deck && (
-          <QuizView
+          <DeckView
             deck={state.deck}
+            mode={state.mode}
             skipped={state.skipped}
             skipReasons={state.skipReasons}
             index={state.cardIndex}
             items={activeItems}
             answers={state.answers}
+            ratings={state.ratings}
             onAnswer={(itemId, choiceIndex) =>
               dispatch(actions.answer(itemId, choiceIndex))
+            }
+            onRate={(itemId, rating) =>
+              dispatch(actions.rateCard(itemId, rating))
             }
             onNext={() => dispatch(actions.nextCard())}
             onPrev={() => dispatch(actions.prevCard())}
             onDelete={(itemId) => dispatch(actions.deleteItem(itemId))}
             onRegenerate={handleRegenerate}
-            onFinish={() => dispatch(actions.finishQuiz())}
-            mcqTotal={quizItems.length}
+            onFinish={() => dispatch(actions.finishSession())}
           />
         )}
 
         {state.phase === "results" && state.deck && (
           <ResultsView
             score={score}
-            total={quizItems.length}
+            total={activeItems.length}
             wrongCount={state.wrongIds.length}
+            mode={state.mode}
             onRetest={() => dispatch(actions.retestWrong())}
             onReset={() => dispatch(actions.reset())}
           />

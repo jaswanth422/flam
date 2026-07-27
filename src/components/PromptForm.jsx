@@ -9,6 +9,8 @@ export function PromptForm({
   disabled,
   initialText = "",
   onTextChange,
+  mode = "flashcards",
+  onModeChange,
 }) {
   const [text, setText] = useState(initialText);
   const [count, setCount] = useState(8);
@@ -30,7 +32,7 @@ export function PromptForm({
 
   const submit = (event) => {
     event.preventDefault();
-    if (!disabled && text.trim()) onSubmit(text, count);
+    if (!disabled && text.trim()) onSubmit(text, count, mode);
   };
 
   const handleKeyDown = (event) => {
@@ -68,6 +70,31 @@ export function PromptForm({
 
   return (
     <form className="prompt-form" onSubmit={submit}>
+      <fieldset className="mode-picker" disabled={disabled}>
+        <legend>Choose a study mode</legend>
+        <div className="mode-segments">
+          <button
+            type="button"
+            className={mode === "flashcards" ? "is-active" : ""}
+            aria-pressed={mode === "flashcards"}
+            onClick={() => onModeChange?.("flashcards")}
+          >
+            <span aria-hidden="true">↻</span>
+            <strong>Flashcards</strong>
+            <small>Recall one idea at a time</small>
+          </button>
+          <button
+            type="button"
+            className={mode === "quiz" ? "is-active" : ""}
+            aria-pressed={mode === "quiz"}
+            onClick={() => onModeChange?.("quiz")}
+          >
+            <span aria-hidden="true">1·2·3</span>
+            <strong>Quiz</strong>
+            <small>Choose from close answers</small>
+          </button>
+        </div>
+      </fieldset>
       <div className="prompt-label-row">
         <label htmlFor="study-material">Your study material</label>
         <span>{text.length.toLocaleString()} characters</span>
@@ -126,7 +153,7 @@ export function PromptForm({
           disabled={disabled || fileBusy || !text.trim()}
         >
           <span aria-hidden="true">✦</span>
-          Build my deck
+          Build {mode === "quiz" ? "quiz" : "flashcards"}
           <span className="key-hint">⌘↵</span>
         </button>
       </div>

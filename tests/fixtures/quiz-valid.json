@@ -1,0 +1,7 @@
+{
+  "title": "Quick Check",
+  "items": [
+    {"type":"mcq","question":"What stores DNA?","choices":["Nucleus","Ribosome","Membrane"],"correctIndex":0},
+    {"type":"mcq","question":"What builds proteins?","choices":["Membrane","Nucleus","Ribosome","Cell wall"],"correctIndex":2}
+  ]
+}

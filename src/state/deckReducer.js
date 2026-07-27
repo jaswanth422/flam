@@ -1,8 +1,10 @@
 export const initialState = {
   deck: null,
   phase: "idle",
+  mode: "flashcards",
   cardIndex: 0,
   answers: {},
+  ratings: {},
   wrongIds: [],
   activeIds: null,
   skipped: 0,
@@ -12,7 +14,12 @@ export const initialState = {
 };
 
 export const actions = {
-  generateStart: (repair = false) => ({ type: "GENERATE_START", repair }),
+  setMode: (mode) => ({ type: "SET_MODE", payload: { mode } }),
+  generateStart: (mode, repair = false) => ({
+    type: "GENERATE_START",
+    payload: { mode },
+    repair,
+  }),
   generateSuccess: (deck, skipped = 0, skipReasons = []) => ({
     type: "GENERATE_SUCCESS",
     payload: { deck, skipped, skipReasons },
@@ -24,8 +31,11 @@ export const actions = {
     type: "ANSWER",
     payload: { itemId, choiceIndex },
   }),
-  startQuiz: () => ({ type: "START_QUIZ" }),
-  finishQuiz: () => ({ type: "FINISH_QUIZ" }),
+  rateCard: (itemId, rating) => ({
+    type: "RATE_CARD",
+    payload: { itemId, rating },
+  }),
+  finishSession: () => ({ type: "FINISH_SESSION" }),
   retestWrong: () => ({ type: "RETEST_WRONG" }),
   reset: () => ({ type: "RESET" }),
   editItem: (itemId, patch) => ({ type: "EDIT_ITEM", payload: { itemId, patch } }),
@@ -46,11 +56,22 @@ function clampedIndex(index, length) {
 
 export function deckReducer(state, action) {
   switch (action.type) {
+    case "SET_MODE":
+      if (
+        state.phase !== "idle" ||
+        !["flashcards", "quiz"].includes(action.payload.mode)
+      ) {
+        return state;
+      }
+      return { ...state, mode: action.payload.mode };
     case "GENERATE_START":
       return {
         ...state,
         deck: null,
         phase: "loading",
+        mode: ["flashcards", "quiz"].includes(action.payload.mode)
+          ? action.payload.mode
+          : state.mode,
         error: null,
         skipped: 0,
         skipReasons: [],
@@ -65,6 +86,7 @@ export function deckReducer(state, action) {
         phase: "studying",
         cardIndex: 0,
         answers: {},
+        ratings: {},
         wrongIds: [],
         activeIds: null,
         error: null,
@@ -80,7 +102,12 @@ export function deckReducer(state, action) {
       return { ...state, cardIndex: clampedIndex(state.cardIndex - 1, count) };
     }
     case "ANSWER":
-      if (Object.hasOwn(state.answers, action.payload.itemId)) return state;
+      if (
+        state.mode !== "quiz" ||
+        Object.hasOwn(state.answers, action.payload.itemId)
+      ) {
+        return state;
+      }
       return {
         ...state,
         answers: {
@@ -88,13 +115,30 @@ export function deckReducer(state, action) {
           [action.payload.itemId]: action.payload.choiceIndex,
         },
       };
-    case "START_QUIZ":
-      return { ...state, phase: "studying", cardIndex: 0, answers: {} };
-    case "FINISH_QUIZ": {
-      const wrongIds = visibleItems(state)
-        .filter((item) => item.type === "mcq")
-        .filter((item) => state.answers[item.id] !== item.correctIndex)
-        .map((item) => item.id);
+    case "RATE_CARD":
+      if (
+        state.mode !== "flashcards" ||
+        !["known", "unknown"].includes(action.payload.rating)
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        ratings: {
+          ...state.ratings,
+          [action.payload.itemId]: action.payload.rating,
+        },
+      };
+    case "FINISH_SESSION": {
+      const items = visibleItems(state);
+      const wrongIds =
+        state.mode === "quiz"
+          ? items
+              .filter((item) => state.answers[item.id] !== item.correctIndex)
+              .map((item) => item.id)
+          : items
+              .filter((item) => state.ratings[item.id] !== "known")
+              .map((item) => item.id);
       return { ...state, wrongIds, phase: "results" };
     }
     case "RETEST_WRONG":
@@ -105,6 +149,9 @@ export function deckReducer(state, action) {
         cardIndex: 0,
         answers: Object.fromEntries(
           Object.entries(state.answers).filter(([id]) => !state.wrongIds.includes(id)),
+        ),
+        ratings: Object.fromEntries(
+          Object.entries(state.ratings).filter(([id]) => !state.wrongIds.includes(id)),
         ),
         phase: "studying",
       };
@@ -127,15 +174,18 @@ export function deckReducer(state, action) {
       if (!state.deck) return state;
       const id = action.payload.itemId;
       const items = state.deck.items.filter((item) => item.id !== id);
-      const { [id]: ignored, ...answers } = state.answers;
+      const slots = state.deck.slots?.filter((slot) => slot.itemId !== id);
+      const { [id]: ignoredAnswer, ...answers } = state.answers;
+      const { [id]: ignoredRating, ...ratings } = state.ratings;
       const wrongIds = state.wrongIds.filter((wrongId) => wrongId !== id);
       const activeIds = state.activeIds?.filter((activeId) => activeId !== id) ?? null;
       const visibleCount =
         activeIds === null ? items.length : items.filter((item) => activeIds.includes(item.id)).length;
       return {
         ...state,
-        deck: { ...state.deck, items },
+        deck: { ...state.deck, items, slots },
         answers,
+        ratings,
         wrongIds,
         activeIds,
         cardIndex: clampedIndex(state.cardIndex, visibleCount),

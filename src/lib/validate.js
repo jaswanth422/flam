@@ -29,7 +29,7 @@ function nextItemId(index) {
   return `${index}-item-${itemCounter}`;
 }
 
-export function parseDeck(rawText) {
+export function parseDeck(rawText, mode) {
   if (typeof rawText !== "string" || rawText.trim().length === 0) {
     return { ok: false, error: errorFor(ErrorKind.UNPARSEABLE) };
   }
@@ -57,12 +57,26 @@ export function parseDeck(rawText) {
 
   const items = [];
   const skipReasons = [];
-  raw.items.forEach((candidate) => {
-    const result = validateItem(candidate);
+  const slots = [];
+  raw.items.forEach((candidate, originalIndex) => {
+    const result = validateItem(candidate, mode);
     if (result.ok) {
-      items.push({ ...result.item, id: nextItemId(items.length) });
+      const item = { ...result.item, id: nextItemId(originalIndex) };
+      items.push(item);
+      slots.push({
+        kind: "item",
+        id: `slot-${originalIndex}`,
+        itemId: item.id,
+        originalIndex,
+      });
     } else {
       skipReasons.push(result.reason);
+      slots.push({
+        kind: "void",
+        id: `void-${originalIndex}`,
+        reason: result.reason,
+        originalIndex,
+      });
     }
   });
 
@@ -78,6 +92,7 @@ export function parseDeck(rawText) {
           ? raw.title.trim()
           : "Untitled deck",
       items,
+      slots,
     },
     skipped: raw.items.length - items.length,
     skipReasons,

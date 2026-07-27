@@ -42,11 +42,11 @@ export function useDeck() {
   }, []);
 
   const generate = useCallback(
-    async (text, count = 8) => {
+    async (text, count = 8, mode = "flashcards") => {
       const cleanText = typeof text === "string" ? text.trim() : "";
       if (!cleanText) return;
 
-      lastRequestRef.current = { text: cleanText, count };
+      lastRequestRef.current = { text: cleanText, count, mode };
       const id = ++reqId.current;
       abortRef.current?.abort();
       abortCardRequests();
@@ -59,7 +59,7 @@ export function useDeck() {
         controller.abort();
       }, timeoutForText(cleanText));
 
-      dispatch(actions.generateStart());
+      dispatch(actions.generateStart(mode));
 
       try {
         let requestText = cleanText;
@@ -70,7 +70,7 @@ export function useDeck() {
           const response = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: requestText, count }),
+            body: JSON.stringify({ text: requestText, count, mode }),
             signal: controller.signal,
           });
           if (id !== reqId.current) return;
@@ -101,14 +101,14 @@ export function useDeck() {
             return;
           }
 
-          const result = parseDeck(data.content);
+          const result = parseDeck(data.content, mode);
           if (
             !result.ok &&
             result.error.kind === ErrorKind.UNPARSEABLE &&
             !repaired
           ) {
             repaired = true;
-            dispatch(actions.generateStart(true));
+            dispatch(actions.generateStart(mode, true));
             requestText = [
               cleanText,
               "",
@@ -153,7 +153,11 @@ export function useDeck() {
 
   const retry = useCallback(() => {
     if (lastRequestRef.current) {
-      return generate(lastRequestRef.current.text, lastRequestRef.current.count);
+      return generate(
+        lastRequestRef.current.text,
+        lastRequestRef.current.count,
+        lastRequestRef.current.mode,
+      );
     }
   }, [generate]);
 
@@ -191,13 +195,17 @@ export function useDeck() {
         body: JSON.stringify({
           text: `${sourceText}\n\nGenerate exactly one ${item.type} to replace a weak study item.`,
           count: 5,
+          mode: item.type === "mcq" ? "quiz" : "flashcards",
         }),
         signal: controller.signal,
       });
       if (!isCurrent() || !response.ok) return;
       const data = await response.json();
       if (!isCurrent()) return;
-      const parsed = parseDeck(data.content);
+      const parsed = parseDeck(
+        data.content,
+        item.type === "mcq" ? "quiz" : "flashcards",
+      );
       const replacement = parsed.ok
         ? parsed.deck.items.find((candidate) => candidate.type === item.type)
         : null;

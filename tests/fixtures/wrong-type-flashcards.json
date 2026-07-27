@@ -1,0 +1,7 @@
+{
+  "title": "Wrong Type",
+  "items": [
+    {"type":"flashcard","front":"Kept","back":"Answer"},
+    {"type":"mcq","question":"Dropped?","choices":["Yes","No","Maybe"],"correctIndex":0}
+  ]
+}
