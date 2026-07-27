@@ -1,0 +1,5 @@
+Here is your study deck:
+```json
+{"title":"Fenced","items":[{"type":"flashcard","front":"Prompt","back":"Answer"}]}
+```
+Happy studying!

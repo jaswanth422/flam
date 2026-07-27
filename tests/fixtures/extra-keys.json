@@ -1,0 +1,13 @@
+{
+  "title": "Extra keys",
+  "items": [
+    {
+      "type":"flashcard",
+      "front":"  Trim me  ",
+      "back":"  And me  ",
+      "id":"model-supplied",
+      "confidence":0.9
+    }
+  ],
+  "debug":"drop this"
+}

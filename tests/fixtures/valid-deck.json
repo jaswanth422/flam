@@ -1,0 +1,16 @@
+{
+  "title": "Plant Biology",
+  "items": [
+    {
+      "type": "flashcard",
+      "front": "What is photosynthesis?",
+      "back": "The process plants use to convert light energy into chemical energy."
+    },
+    {
+      "type": "mcq",
+      "question": "Where does photosynthesis primarily occur?",
+      "choices": ["Nucleus", "Chloroplast", "Cell wall"],
+      "correctIndex": 1
+    }
+  ]
+}

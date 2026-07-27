@@ -1,0 +1,8 @@
+{
+  "title": "Blank check",
+  "items": [
+    {"type":"flashcard","front":"  ","back":"Answer"},
+    {"type":"mcq","question":"Question","choices":["Valid","   "],"correctIndex":0},
+    {"type":"flashcard","front":"Kept","back":"Also kept"}
+  ]
+}

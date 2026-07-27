@@ -1,0 +1,7 @@
+{
+  "title": "Index check",
+  "items": [
+    {"type":"mcq","question":"Bad index","choices":["A","B"],"correctIndex":2},
+    {"type":"flashcard","front":"Survivor","back":"Kept"}
+  ]
+}

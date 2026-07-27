@@ -1,0 +1,9 @@
+{
+  "title": "Partial",
+  "items": [
+    {"type":"flashcard","front":"Good","back":"Valid"},
+    {"type":"mcq","question":"Valid?","choices":["No","Yes"],"correctIndex":1},
+    {"type":"mcq","question":"Bad?","choices":["Only","Two"],"correctIndex":4},
+    {"type":"flashcard","front":"Missing back"}
+  ]
+}
