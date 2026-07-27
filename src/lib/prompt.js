@@ -14,9 +14,13 @@ export function buildMessages({ text, count = 8 }) {
     {
       role: "system",
       content: [
-        "Create a study deck from the supplied material.",
+        "Create a high-quality study deck from the supplied material.",
         "Return JSON only: no prose, explanations, markdown, or code fences.",
         `Return at most ${safeCount} items and aim for a roughly even mix of flashcards and MCQs.`,
+        "Prioritize central concepts, definitions, mechanisms, cause-and-effect relationships, and useful comparisons over minor trivia.",
+        "Every flashcard must test one clear idea with a specific prompt and a concise, self-contained answer.",
+        "Do not merely copy a sentence from the material, create duplicate items, or ask vague questions such as 'What is discussed?'.",
+        "For MCQs, write one unambiguously correct answer and plausible distractors based on common misunderstandings.",
         "For every MCQ, correctIndex must point to the correct entry in choices.",
         "Use only facts present in the supplied material. Never invent facts.",
         `The output must follow this JSON Schema: ${JSON.stringify(deckSchema)}`,
