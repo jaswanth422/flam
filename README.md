@@ -3,7 +3,6 @@
 Lumen turns notes, PDFs, Word documents, Markdown, or a short topic into focused
 flashcards and multiple-choice quizzes.
 
-**Live demo:** https://lumen-study-assistant.katurijaswanth422.chatgpt.site
 
 ## The problem
 
@@ -118,8 +117,8 @@ npm run preview # preview the production build
 ## AI usage note
 
 I used OpenAI Codex as a pair-programming assistant for implementation,
-refactoring suggestions, test-case generation, UI iteration, deployment
-troubleshooting, and README drafting. I supplied the product requirements and
+refactoring suggestions, test-case generation
+ I supplied the product requirements and
 constraints, reviewed the generated changes, tested the behavior, corrected
 issues, and made the final architecture and product decisions.
 
