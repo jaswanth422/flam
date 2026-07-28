@@ -35,6 +35,8 @@ Open `.env.local` and add your key:
 ```text
 FIREWORKS_API_KEY=your_key_here
 FIREWORKS_MODEL=accounts/fireworks/models/deepseek-v4-flash
+XAI_API_KEY=your_xai_api_key_here
+XAI_MODEL=grok-4.5
 ```
 
 Then run:
