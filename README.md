@@ -1,78 +1,169 @@
-# Lumen
+# Lumen Study Assistant
 
-Lumen turns pasted study material into focused flashcards or a
-multiple-choice quiz. The interface is built with React 18 and the request
-lifecycle is managed with `useReducer`, request IDs, and abort controllers.
+Lumen turns notes, PDFs, Word documents, Markdown, or a short topic into focused
+flashcards and multiple-choice quizzes.
 
-The separate modes are deliberate: Lumen favors two well-executed study
-experiences over a mixed deck. Flashcards use a horizontal recall orbit and
-ratings; quizzes use a vertical answer tumbler and scoring. In both views the
-HTML remains a flat, ordered list, while CSS transforms provide the spatial
-presentation. Invalid generated items retain their source position as
-non-interactive “void” cards instead of silently shifting the deck.
+**Live demo:** https://lumen-study-assistant.katurijaswanth422.chatgpt.site
 
-## Grounding and verification
+## The problem
 
-Lumen uses two honest input regimes:
+AI-generated study cards can look convincing while containing unsupported or
+random facts. Lumen makes that uncertainty visible.
 
-- Inputs of at least 400 characters are treated as source material. The model
-  must return an evidence quote for each item, and the client checks that quote
-  against the supplied text.
-- Shorter inputs are treated as topics. They use conservative textbook-level
-  knowledge and are explicitly labelled as general knowledge, never as
-  verified against the user's notes.
+- Notes with 400 or more characters use **source mode**. Every generated item
+  includes an evidence quote that is checked against the original notes.
+- Shorter input uses **topic mode**. The deck is clearly labelled as general
+  knowledge and never claims to be verified against the user's notes.
+- Structurally broken items are rejected. Useful items with softer quality
+  problems remain editable and display a warning.
 
-Source items have three verification outcomes:
+This produces an auditable statement such as “7 of 8 cards verified” instead of
+silently hiding questionable output.
 
-- `verified`: the normalized quote appears contiguously in the source.
-- `partial`: at least 85% of meaningful evidence tokens occur within a local
-  source window.
-- `unverified`: the quote is missing, too short, fabricated, or stitched from
-  passages too far apart.
+## Quick start
 
-Structural failures such as the wrong card type, a blank question/answer, an
-invalid correct index, or anything other than four quiz choices are dropped.
-Presentation-quality failures such as a long front, missing story, missing
-topic, or failed evidence check are warnings: the item stays visible so the
-student can inspect and edit it. This prevents the validator from silently
-inflating its own trust score.
-
-The 85% partial-match threshold is hand-tuned against the project fixtures, not
-a mathematically privileged value. Token matching is also order-independent
-inside its locality window, so a locally scrambled quote can still pass as a
-close match. A longest-common-subsequence ratio is the next planned improvement.
-
-## Run locally
+Requirements: Node.js 18.18 or newer and a
+[Fireworks AI](https://fireworks.ai/) API key.
 
 ```bash
-npm install
-npm run dev
+git clone YOUR_GITHUB_REPOSITORY_URL
+cd lumen-study-assistant
+cp .env.example .env.local
 ```
 
-The standalone Vite preview serves the interface. For live generation, run it
-behind a platform that supports the Vercel handler in `api/generate.js`, or use
-the included Sites worker adapter.
-
-## Configuration
-
-Copy `.env.example` to `.env.local` and provide:
+Open `.env.local` and add your key:
 
 ```text
-FIREWORKS_API_KEY=...
-FIREWORKS_MODEL=...
+FIREWORKS_API_KEY=your_key_here
+FIREWORKS_MODEL=accounts/fireworks/models/deepseek-v4-flash
 ```
 
-The API key is read only in server-side code. It is never referenced through a
-Vite client environment variable and never enters the browser bundle.
+Then run:
 
-## Quality checks
+```bash
+npm install && npm start
+```
+
+Open http://127.0.0.1:5173.
+
+The interface still opens without an API key, but AI generation requires the
+key. `.env.local` is ignored by Git and must never be committed.
+
+## How to use it
+
+1. Choose **Flashcards** or **Quiz**.
+2. Paste text or upload a PDF, `.docx`, Markdown, or text file.
+3. Choose the number of items and generate the deck.
+4. For flashcards, reveal the answer and rate your recall.
+5. For quizzes, answer with the buttons or number keys.
+6. Inspect evidence badges, edit weak items, and retest missed material.
+
+## Main technical decisions
+
+### Separate study modes
+
+Flashcards and quizzes use different prompts, schemas, validation, interactions,
+and results. A homogeneous deck is easier to study and simpler to reason about
+than a mixed deck.
+
+### Evidence grounding
+
+The model must return a short supporting quote in source mode. Client-side code
+normalizes punctuation and spacing and classifies each quote as:
+
+- `verified`: an exact normalized source match;
+- `partial`: at least 85% meaningful-token overlap inside a local source window;
+- `unverified`: missing, too short, fabricated, or stitched from distant text.
+
+### Defensive AI-output handling
+
+The application treats model output as untrusted data:
+
+- JSON fences and surrounding prose are removed before parsing.
+- Wrong card types, blank required fields, invalid answer indexes, and quizzes
+  without exactly four choices are dropped.
+- Length, story, topic, and grounding problems produce warnings without
+  destroying an otherwise useful item.
+- Malformed item positions remain visible as non-interactive “void” cards.
+- One JSON self-repair request is attempted after an unparseable response.
+- Requests use abort controllers, request IDs, rate-limit retrying, and timeouts.
+
+### State and scoring
+
+`useReducer` owns generation, study, retest, rating, and error state. Quiz scores
+are derived from the deck and answers instead of being stored twice. Unanswered
+questions count as incorrect and results are grouped by weakest topic first.
+
+## Project structure
+
+```text
+src/components/       React interface and study controls
+src/hooks/useDeck.js  AI request lifecycle and cancellation
+src/lib/              Prompts, schemas, parsing, files, and grounding
+src/state/            Reducer and derived quiz selectors
+api/generate.js       Server-side Fireworks API endpoint
+worker/               Production Sites worker adapter
+tests/                Validation, grounding, reducer, and scoring tests
+```
+
+## Commands
+
+```bash
+npm start       # local app with the AI API route
+npm test        # run the test suite
+npm run build   # create the production build
+npm run preview # preview the production build
+```
+
+## AI usage note
+
+I used OpenAI Codex as a pair-programming assistant for implementation,
+refactoring suggestions, test-case generation, UI iteration, deployment
+troubleshooting, and README drafting. I supplied the product requirements and
+constraints, reviewed the generated changes, tested the behavior, corrected
+issues, and made the final architecture and product decisions.
+
+I did not paste an existing public project or tutorial implementation. The
+application was built and iterated specifically for this project.
+
+## Limitations and next steps
+
+- The 85% partial-match threshold is hand-tuned, not mathematically optimal.
+- Token overlap is order-independent within its local window. A
+  longest-common-subsequence comparison would better detect scrambled quotes.
+- Evidence matching checks lexical support, not full semantic correctness.
+- Topic mode depends on model knowledge and therefore cannot be source-verified.
+- Very large documents are truncated before generation. Chunking and retrieval
+  would provide better whole-document coverage.
+- `.doc` files are not supported; save them as `.docx` first.
+- The application has no user accounts or cloud deck persistence.
+
+## Time spent
+
+Approximately two focused days, including implementation, testing, UI
+iteration, deployment, and documentation.
+
+## Screen-recording checklist
+
+A short two-to-three-minute recording can show:
+
+1. The mode switch and file-upload controls.
+2. A source-mode flashcard deck with a revealed evidence quote.
+3. Recall rating and automatic movement to the next card.
+4. A quiz answer with its explanation.
+5. Results grouped by topic and the “Retest wrong” flow.
+
+Do not expose `.env.local`, the API key, or terminal environment variables in
+the recording.
+
+## Verification
+
+The automated suite covers grounding states, exact and fuzzy evidence, quote
+normalization, fabricated and stitched evidence, topic-mode honesty, malformed
+AI output, mode-specific schemas, reducer behavior, retesting, file validation,
+and derived quiz scoring.
 
 ```bash
 npm test
 npm run build
 ```
-
-The test suite covers both generation modes, wrong-type items, exact and fuzzy
-evidence, quote-style normalization, fabricated and stitched evidence, topic
-mode, soft warnings, malformed output, derived quiz scoring, reducer state,
-and retest edge cases.
