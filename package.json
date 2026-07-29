@@ -8,8 +8,11 @@
   },
   "scripts": {
     "start": "vite --host 127.0.0.1",
+    "start:api": "node server/index.js",
     "dev": "vite",
     "build": "vite build && node scripts/stage-site.js",
+    "build:nginx": "vite build",
+    "build:vercel": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

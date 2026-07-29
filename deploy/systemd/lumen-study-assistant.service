@@ -1,0 +1,22 @@
+[Unit]
+Description=Lumen Study Assistant API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/lumen-study-assistant
+Environment=NODE_ENV=production
+Environment=API_HOST=127.0.0.1
+Environment=API_PORT=3000
+EnvironmentFile=/etc/lumen-study-assistant.env
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

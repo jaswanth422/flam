@@ -3,7 +3,6 @@
 Lumen turns notes, PDFs, Word documents, Markdown, or a short topic into focused
 flashcards and multiple-choice quizzes.
 
-
 ## The problem
 
 AI-generated study cards can look convincing while containing unsupported or
@@ -103,6 +102,8 @@ src/hooks/useDeck.js  AI request lifecycle and cancellation
 src/lib/              Prompts, schemas, parsing, files, and grounding
 src/state/            Reducer and derived quiz selectors
 api/generate.js       Server-side Fireworks API endpoint
+server/index.js       Node API process for an Nginx deployment
+deploy/               Nginx and systemd production templates
 worker/               Production Sites worker adapter
 tests/                Validation, grounding, reducer, and scoring tests
 ```
@@ -111,16 +112,92 @@ tests/                Validation, grounding, reducer, and scoring tests
 
 ```bash
 npm start       # local app with the AI API route
+npm run start:api   # production API process behind Nginx
 npm test        # run the test suite
 npm run build   # create the production build
+npm run build:nginx # create static files for Nginx
 npm run preview # preview the production build
 ```
+
+## Deploy a live demo with Vercel
+
+Run these commands from the project folder:
+
+```bash
+npx vercel login
+npx vercel link
+npx vercel env add FIREWORKS_API_KEY production --sensitive
+npx vercel env add FIREWORKS_MODEL production
+npx vercel --prod
+```
+
+When prompted for `FIREWORKS_MODEL`, enter:
+
+```text
+accounts/fireworks/models/deepseek-v4-flash
+```
+
+Enter the API key only in Vercel's secure prompt. Do not pass it directly in the
+command or commit `.env.local`. The link command connects the local folder to a
+Vercel project; the final command creates the public production URL.
+
+## Deploy with Nginx on Ubuntu
+
+Nginx serves the React build and forwards `/api/` requests to the private Node
+API process on port 3000. This requires an Ubuntu VPS with a public IP, Node.js
+20 or newer, and npm; Nginx itself is not a hosting provider.
+
+On the server, install the required software and clone the repository:
+
+```bash
+sudo apt update
+sudo apt install -y nginx git
+node --version
+sudo git clone YOUR_GITHUB_REPOSITORY_URL /var/www/lumen-study-assistant
+sudo chown -R "$USER":www-data /var/www/lumen-study-assistant
+cd /var/www/lumen-study-assistant
+npm ci
+npm run build:nginx
+```
+
+Create `/etc/lumen-study-assistant.env` with the following values:
+
+```text
+FIREWORKS_API_KEY=your_key_here
+FIREWORKS_MODEL=accounts/fireworks/models/deepseek-v4-flash
+```
+
+Protect the key and install the included service and Nginx configuration:
+
+```bash
+sudo chmod 600 /etc/lumen-study-assistant.env
+sudo cp deploy/systemd/lumen-study-assistant.service /etc/systemd/system/
+sudo cp deploy/nginx/lumen-study-assistant.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/lumen-study-assistant.conf /etc/nginx/sites-enabled/lumen-study-assistant.conf
+sudo rm /etc/nginx/sites-enabled/default
+sudo systemctl daemon-reload
+sudo systemctl enable --now lumen-study-assistant
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Open `http://YOUR_SERVER_IP`. Check the two services if anything fails:
+
+```bash
+systemctl status lumen-study-assistant --no-pager
+systemctl status nginx --no-pager
+curl http://127.0.0.1:3000/healthz
+```
+
+Before an interview demo, point a domain at the server and enable HTTPS. Replace
+`server_name _;` in the Nginx template with the domain, then use your preferred
+ACME/Let's Encrypt client to install the certificate.
 
 ## AI usage note
 
 I used OpenAI Codex as a pair-programming assistant for implementation,
-refactoring suggestions, test-case generation
- I supplied the product requirements and
+refactoring suggestions, test-case generation, UI iteration, deployment
+troubleshooting, and README drafting. I supplied the product requirements and
 constraints, reviewed the generated changes, tested the behavior, corrected
 issues, and made the final architecture and product decisions.
 
