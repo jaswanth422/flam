@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: lumen-study-assistant
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build:nginx
+    startCommand: npm run start:api
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FIREWORKS_MODEL
+        value: accounts/fireworks/models/deepseek-v4-flash
+      - key: FIREWORKS_API_KEY
+        sync: false
